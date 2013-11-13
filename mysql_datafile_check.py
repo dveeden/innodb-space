@@ -39,7 +39,8 @@ class ibdatafile(object):
         retval += ('Max size: %s, ' % self.maxsize)
         retval += ('Autoextend: %s, ' % self.autoextend)
         retval += ('Current size: %s, ' % self.cursize)
-        retval += ('Free size: %s ' % self.freesize)
+        retval += ('Free size: %s, ' % self.freesize)
+        retval += ('File exists: %s ' % self.file_exists)
         return retval
 
     @property
@@ -52,12 +53,24 @@ class ibdatafile(object):
 
     @property
     def cursize(self):
-        fileinfo = os.stat(self.fullpath)
+        if not self.file_exists is True:
+            return None
+        try:
+            fileinfo = os.stat(self.fullpath)
+        except FileNotFoundError:
+            fileinfo = None
         return fileinfo.st_size
 
     @property
+    def file_exists(self):
+        if os.path.exists(self.fullpath):
+            return True
+        else:
+            return False
+
+    @property
     def freesize(self):
-        if self.maxsize:
+        if self.maxsize and self.cursize:
             freesize = self.maxsize - self.cursize
         else:
             freesize = None
@@ -109,27 +122,23 @@ if __name__ == '__main__':
         ibpath = ibpath.strip('"')
     except ConfigParser.NoOptionError as msg:
         sys.exit('Error: Required option not found: %s' % msg)
-    
+
     print('Datadir: %s' % datadir)
     print('InnoDB Data File Path: %s' % ibpath)
-    
+
     datafiles = {}
-    keywords = ['autoextend','max']
-    prevpart = None
-    for part in ibpath.split(':'):
-        if not part in keywords:
-            if not part[0].isdigit():
-                datafile = part
-                datafiles[datafile] = ibdatafile(datafile)
-                datafiles[datafile].datadir = datadir
-            elif prevpart == 'max':
-                datafiles[datafile].maxsize = part
-            elif prevpart == datafile:
-                datafiles[datafile].initsize = part
-        elif part == 'autoextend':
+    for datafileconfig in ibpath.split(';'):
+        parts = datafileconfig.split(':')
+        datafile = parts[0]
+        datafiles[datafile] = ibdatafile(datafile)
+        datafiles[datafile].datadir = datadir
+        datafiles[datafile].initsize = parts[1]
+        if 'autoextend' in parts:
             datafiles[datafile].autoextend = 'on'
-        prevpart = part
-                
+        if 'max' in parts:
+            max_index = [i for i,x in enumerate(parts) if x=='max'][0]
+            maxsize = parts[max_index + 1]
+            datafiles[datafile].maxsize = maxsize
     
     for datafile in datafiles:
         print(datafiles[datafile])
