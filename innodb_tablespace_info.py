@@ -4,7 +4,7 @@ import sys
 import argparse
 try:
     import ConfigParser
-except ImportError:
+except ImportError: # For Python 3.x
     import configparser as ConfigParser
 
 # Assumptions:
@@ -136,6 +136,7 @@ if __name__ == '__main__':
         if 'autoextend' in parts:
             datafiles[datafile].autoextend = 'on'
         if 'max' in parts:
+            # Find the index numer for the location of 'max' in the parts list
             max_index = [i for i,x in enumerate(parts) if x=='max'][0]
             maxsize = parts[max_index + 1]
             datafiles[datafile].maxsize = maxsize
