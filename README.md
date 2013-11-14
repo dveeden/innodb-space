@@ -1,6 +1,6 @@
 
-InnoDB Free Space Moitor
-========================
+InnoDB Free Space Monitor
+=========================
 This tool monitors a InnoDB tablespace wich a autoincrement with a maximum set.
 
 It compares the setting in the config file against the size of the file on the filesystem.
