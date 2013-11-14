@@ -1,18 +1,27 @@
 #!/usr/bin/python3 -tt
+'''
+Get info about InnoDB table spaces.
+
+This uses the my.cnf file and access to the filesystem.
+
+Assumptions:
+- innodb_data_home_dir is not set
+- innodb_file_per_table is not set
+- files are specified w/o path
+'''
+
 import os
 import sys
 import argparse
+import logging
 try:
     import ConfigParser
 except ImportError: # For Python 3.x
     import configparser as ConfigParser
 
-# Assumptions:
-# - innodb_data_home_dir is not set
-# - innodb_file_per_table is not set
-# - files are specified w/o path
-
 def size_to_int(size):
+    '''Get size in bytes from human readable size like 100M, 10G'''
+
     unit_part = size[-1]
     size_part = int(size[:-1])
     if unit_part == 'K':
@@ -24,6 +33,44 @@ def size_to_int(size):
     else:
         real_size = size
     return int(real_size)
+
+def parse_mysql_config(configfile):
+    '''Get datadir and InnoDB data file path from the my.cnf'''
+    
+    mysql_config = ConfigParser.RawConfigParser(allow_no_value=True)
+    try:
+        mysql_config.read(configfile)
+    except ConfigParser.DuplicateOptionError as msg:
+        logging.warn('%s', msg)
+
+    try:
+        datadir = mysql_config.get('mysqld','datadir')
+        if isinstance(datadir, list):
+            datadir=datadir[0]
+        datadir = datadir.strip('"')
+        ibpath = mysql_config.get('mysqld','innodb_data_file_path')
+        ibpath = ibpath.strip('"')
+    except ConfigParser.NoOptionError as msg:
+        logging.critical('Required option not found: %s', msg)
+
+    return (datadir, ibpath)
+
+def check_datafiles(datadir, ibpath):
+    datafiles = {}
+    for datafileconfig in ibpath.split(';'):
+        parts = datafileconfig.split(':')
+        datafile = parts[0]
+        datafiles[datafile] = ibdatafile(datafile)
+        datafiles[datafile].datadir = datadir
+        datafiles[datafile].initsize = parts[1]
+        if 'autoextend' in parts:
+            datafiles[datafile].autoextend = 'on'
+        if 'max' in parts:
+            # Find the index numer for the location of 'max' in the parts list
+            max_index = [i for i,x in enumerate(parts) if x=='max'][0]
+            maxsize = parts[max_index + 1]
+            datafiles[datafile].maxsize = maxsize
+    return datafiles
 
 class ibdatafile(object):
     def __init__(self, datafile):
@@ -104,42 +151,16 @@ if __name__ == '__main__':
         print('Error: No config file specified')
         parser.print_usage()
         sys.exit(1)
+
     if not os.path.exists(configfile):
         sys.exit('Error: Config file %s does not exist' % configfile)
-    
-    mysql_config = ConfigParser.RawConfigParser(allow_no_value=True)
-    try:
-        mysql_config.read(configfile)
-    except ConfigParser.DuplicateOptionError as msg:
-        print('Warning: %s' % msg)
 
-    try:
-        datadir = mysql_config.get('mysqld','datadir')
-        if isinstance(datadir, list):
-            datadir=datadir[0]
-        datadir = datadir.strip('"')
-        ibpath = mysql_config.get('mysqld','innodb_data_file_path')
-        ibpath = ibpath.strip('"')
-    except ConfigParser.NoOptionError as msg:
-        sys.exit('Error: Required option not found: %s' % msg)
+    datadir, ibpath = parse_mysql_config(configfile)
 
     print('Datadir: %s' % datadir)
-    print('InnoDB Data File Path: %s' % ibpath)
+    print('InnoDB Data File Path: %s\n' % ibpath)
 
-    datafiles = {}
-    for datafileconfig in ibpath.split(';'):
-        parts = datafileconfig.split(':')
-        datafile = parts[0]
-        datafiles[datafile] = ibdatafile(datafile)
-        datafiles[datafile].datadir = datadir
-        datafiles[datafile].initsize = parts[1]
-        if 'autoextend' in parts:
-            datafiles[datafile].autoextend = 'on'
-        if 'max' in parts:
-            # Find the index numer for the location of 'max' in the parts list
-            max_index = [i for i,x in enumerate(parts) if x=='max'][0]
-            maxsize = parts[max_index + 1]
-            datafiles[datafile].maxsize = maxsize
+    datafiles = check_datafiles(datadir, ibpath)
     
     for datafile in datafiles:
         print(datafiles[datafile])
