@@ -1,0 +1,5 @@
+language: python
+python:
+  - "3.3"
+  - "2.7"
+script: test/test_size_to_int.py
