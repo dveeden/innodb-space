@@ -12,3 +12,6 @@ Example:
 
 	$ ./innodb_check_free.py --critical 10000000 -c /etc/my.cnf 
 	CRITICAL: Datafile ibdata1 is allowed to grow with 6291456 bytes, critical threshold is 10000000
+
+Notes on the tablespace settings in InnoDB
+ - It looks like a size in KB is not actually supported (MySQL Bug #68282)
