@@ -8,6 +8,7 @@ Assumptions:
 - innodb_data_home_dir is not set
 - innodb_file_per_table is not set
 - files are specified w/o path
+- no raw device tablespaces are in use
 '''
 
 import os
