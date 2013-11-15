@@ -1,3 +1,6 @@
 *.pyc
 .pydevproject
 .project
+.settings
+MANIFEST
+dist
