@@ -16,8 +16,9 @@ import argparse
 import logging
 try:
     import ConfigParser
-except ImportError: # For Python 3.x
+except ImportError:    # For Python 3.x
     import configparser as ConfigParser
+
 
 def size_to_int(size):
     '''Get size in bytes from human readable size like 100M, 10G'''
@@ -30,13 +31,16 @@ def size_to_int(size):
         real_size = size_part * 1048576
     elif unit_part == 'G':
         real_size = size_part * 1073741824
-    else:
+    elif unit_part.isdigit():
         real_size = size
+    else:
+        raise ValueError('%s is not a valid size' % size)
     return int(real_size)
+
 
 def parse_mysql_config(configfile):
     '''Get datadir and InnoDB data file path from the my.cnf'''
-    
+
     mysql_config = ConfigParser.RawConfigParser(allow_no_value=True)
     try:
         mysql_config.read(configfile)
@@ -44,16 +48,17 @@ def parse_mysql_config(configfile):
         logging.warn('%s', msg)
 
     try:
-        datadir = mysql_config.get('mysqld','datadir')
+        datadir = mysql_config.get('mysqld', 'datadir')
         if isinstance(datadir, list):
-            datadir=datadir[0]
+            datadir = datadir[0]
         datadir = datadir.strip('"')
-        ibpath = mysql_config.get('mysqld','innodb_data_file_path')
+        ibpath = mysql_config.get('mysqld', 'innodb_data_file_path')
         ibpath = ibpath.strip('"')
     except ConfigParser.NoOptionError as msg:
         logging.critical('Required option not found: %s', msg)
 
     return (datadir, ibpath)
+
 
 def check_datafiles(datadir, ibpath):
     datafiles = {}
@@ -67,10 +72,11 @@ def check_datafiles(datadir, ibpath):
             datafiles[datafile].autoextend = 'on'
         if 'max' in parts:
             # Find the index numer for the location of 'max' in the parts list
-            max_index = [i for i,x in enumerate(parts) if x=='max'][0]
+            max_index = [i for i, x in enumerate(parts) if x == 'max'][0]
             maxsize = parts[max_index + 1]
             datafiles[datafile].maxsize = maxsize
     return datafiles
+
 
 class ibdatafile(object):
     def __init__(self, datafile):
@@ -161,6 +167,6 @@ if __name__ == '__main__':
     print('InnoDB Data File Path: %s\n' % ibpath)
 
     datafiles = check_datafiles(datadir, ibpath)
-    
+
     for datafile in datafiles:
         print(datafiles[datafile])
