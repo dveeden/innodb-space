@@ -15,3 +15,5 @@ Example:
 
 Notes on the tablespace settings in InnoDB
  - It looks like a size in KB is not actually supported (MySQL Bug #68282)
+
+All script use Python 3 except innodb_check_free_pynag.py as pynag doesn't support Python3 yet

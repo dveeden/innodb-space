@@ -57,6 +57,7 @@ def parse_mysql_config(configfile):
         ibpath = ibpath.strip('"')
     except ConfigParser.NoOptionError as msg:
         logging.critical('Required option not found: %s', msg)
+        raise
 
     return (datadir, ibpath)
 
