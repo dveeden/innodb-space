@@ -1,5 +1,8 @@
 language: python
+
 python:
   - "3.3"
   - "2.7"
-script: test/run_all.sh
+script: nosetests --with-coverage
+
+after_success: coveralls
