@@ -1,0 +1,4 @@
+[run]
+include = 
+	innodb*.py
+	setup.py
